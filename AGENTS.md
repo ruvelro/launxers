@@ -32,14 +32,14 @@ flags silenciosos.
 
 Secciones, en orden, dentro de `Install-GameLaunchers.ps1`:
 
-1. **Cabecera de ayuda** (`<# .SYNOPSIS ... #>`) + `param()` (`-All`, `-List`, `-NoFallback`).
+1. **Cabecera de ayuda** (`<# .SYNOPSIS ... #>`) + `param()` (`-All`, `-List`, `-NoFallback`, `-Update`, `-DryRun`).
 2. **Constantes**: `$ScriptVersion`, `$ScriptRoot`, `$LogFile`.
 3. **Catálogo `$Launchers`**: array de `pscustomobject` (ver abajo).
 4. **Utilidades**: `Write-Log`, `Write-Banner`.
 5. **Auto-elevación**: `Test-Admin`, `Invoke-SelfElevation`.
-6. **winget**: `Test-Winget`, `Initialize-Winget`.
-7. **Instalación**: `Install-ViaWinget`, `Install-ViaFallback`, `Install-Launcher`.
-8. **UI**: `Show-Catalog`, `Select-Launchers`, `Show-Summary`.
+6. **winget**: `Test-Winget`, `Initialize-Winget`, `Test-LauncherInstalled` (detección de instalados con caché de `winget list`).
+7. **Instalación/actualización**: `Install-ViaWinget`, `Update-ViaWinget`, `Install-ViaFallback`, `Install-Launcher` (gestiona `-Update`, `-DryRun` y el contador de progreso).
+8. **UI**: `Show-Catalog` (muestra estado `[OK]`), `Select-Launchers`, `Show-Summary`.
 9. **MAIN**: flujo principal al final del archivo.
 
 ### Cómo añadir un launcher

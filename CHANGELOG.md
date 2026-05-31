@@ -7,6 +7,20 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+## [1.1.0] - 2026-05-31
+
+### Added
+- Flag `-Update`: actualiza (winget upgrade) los launchers seleccionados que ya
+  estén instalados, con función `Update-ViaWinget`.
+- Flag `-DryRun`: simula la instalación o actualización sin tocar el sistema (y
+  sin solicitar permisos de Administrador).
+- Detección de launchers ya instalados (`Test-LauncherInstalled`, con caché de
+  `winget list`): el catálogo y el menú muestran un indicador `[OK]`.
+- Contador de progreso `[i/N]` durante el proceso de instalación/actualización.
+
+### Removed
+- Launchers **Origin (legacy)** y **Paradox Launcher** del catálogo.
+
 ## [1.0.0] - 2026-05-31
 
 ### Added
@@ -27,5 +41,6 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
   desarrollo y reglas de mantenimiento), `CLAUDE.md` (puntero a `AGENTS.md`),
   `LICENSE` (MIT) y este `CHANGELOG.md`.
 
-[No publicado]: https://github.com/ruvelro/launxers/compare/v1.0.0...HEAD
+[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/ruvelro/launxers/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ruvelro/launxers/releases/tag/v1.0.0

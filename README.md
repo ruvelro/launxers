@@ -9,7 +9,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE?logo=powershell&logoColor=white)
 ![winget](https://img.shields.io/badge/winget-powered-blueviolet)
-![Versión](https://img.shields.io/badge/versión-1.0.0-success)
+![Versión](https://img.shields.io/badge/versión-1.1.0-success)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
 </div>
@@ -23,9 +23,11 @@ Montas un PC nuevo, formateas, o simplemente quieres tener todas tus tiendas de 
 - 🤫 **Instalación silenciosa de verdad** — sin asistentes ni ventanas de "Siguiente".
 - 📦 **winget primero** — usa el gestor de paquetes nativo de Windows, siempre actualizado.
 - 🛟 **Fallback automático** — si winget no está o un paquete falla, descarga el instalador oficial y lo lanza con flags silenciosos.
-- 🧩 **Menú interactivo** — elige cuáles quieres… o instala **todos** con un flag.
+- 🧩 **Menú interactivo** — elige cuáles quieres… o instala **todos** con un flag. Marca con `[OK]` lo que ya tienes instalado.
+- 🔄 **Actualiza también** — con `-Update` pone al día tus launchers ya instalados.
+- 🔍 **Modo simulación** — con `-DryRun` ves qué haría sin tocar nada (ni pide admin).
 - 🛡️ **Auto-elevación UAC** — se relanza como Administrador solo cuando hace falta.
-- 📝 **Log + tabla resumen** — sabes exactamente qué se instaló y qué falló.
+- 📝 **Log + tabla resumen** — con contador de progreso `[i/N]`; sabes qué se instaló y qué falló.
 
 ---
 
@@ -49,8 +51,12 @@ Aparecerá el menú. Escribe los números que quieras (`1 3 5`), `A` para **todo
 |---|---|
 | `.\Install-GameLaunchers.ps1` | Menú interactivo para elegir launchers. |
 | `.\Install-GameLaunchers.ps1 -All` | Instala **toda** la lista sin interacción. |
-| `.\Install-GameLaunchers.ps1 -List` | Muestra el catálogo y sale (no instala nada). |
+| `.\Install-GameLaunchers.ps1 -List` | Muestra el catálogo (con estado *instalado*) y sale. |
+| `.\Install-GameLaunchers.ps1 -Update` | **Actualiza** (winget upgrade) los launchers seleccionados ya instalados. |
+| `.\Install-GameLaunchers.ps1 -DryRun` | **Simula** la operación: muestra qué haría sin instalar nada (no pide admin). |
 | `.\Install-GameLaunchers.ps1 -NoFallback` | Usa **solo** winget, sin descarga directa de respaldo. |
+
+> Los flags se combinan: por ejemplo `-All -Update` actualiza toda la lista, y `-All -DryRun` simula una instalación completa.
 
 Recuerda anteponer `powershell -ExecutionPolicy Bypass -File` si tu política de ejecución lo requiere.
 
@@ -63,16 +69,14 @@ Recuerda anteponer `powershell -ExecutionPolicy Bypass -File` si tu política de
 | 1 | **Steam** | `Valve.Steam` | Cliente de Valve. |
 | 2 | **Epic Games** | `EpicGames.EpicGamesLauncher` | Instalador MSI. |
 | 3 | **EA app** | `ElectronicArts.EADesktop` | Sustituto de Origin. Solo winget. |
-| 4 | **Origin (legacy)** | `ElectronicArts.Origin` | Cliente antiguo de EA. |
-| 5 | **Ubisoft Connect** | `Ubisoft.Connect` | Antes Uplay. |
-| 6 | **GOG Galaxy** | `GOG.Galaxy` | Juegos sin DRM. |
-| 7 | **Battle.net** | `Blizzard.BattleNet` | Blizzard. Solo winget. |
-| 8 | **Amazon Games** | `Amazon.Games` | Incluye Prime Gaming. |
-| 9 | **Rockstar Launcher** | `RockstarGames.RockstarGamesLauncher` | GTA, Red Dead… |
-| 10 | **Xbox / Game Pass** | `9MV0B5HZVK9Z` (Store) | App Xbox vía Microsoft Store. |
-| 11 | **itch.io** | `ItchIo.Itch` | Juegos indie. |
-| 12 | **Playnite** | `Playnite.Playnite` | Meta-launcher: unifica todas tus bibliotecas. |
-| 13 | **Paradox Launcher** | `ParadoxInteractive.ParadoxLauncher` | Paradox Interactive. |
+| 4 | **Ubisoft Connect** | `Ubisoft.Connect` | Antes Uplay. |
+| 5 | **GOG Galaxy** | `GOG.Galaxy` | Juegos sin DRM. |
+| 6 | **Battle.net** | `Blizzard.BattleNet` | Blizzard. Solo winget. |
+| 7 | **Amazon Games** | `Amazon.Games` | Incluye Prime Gaming. |
+| 8 | **Rockstar Launcher** | `RockstarGames.RockstarGamesLauncher` | GTA, Red Dead… |
+| 9 | **Xbox / Game Pass** | `9MV0B5HZVK9Z` (Store) | App Xbox vía Microsoft Store. |
+| 10 | **itch.io** | `ItchIo.Itch` | Juegos indie. |
+| 11 | **Playnite** | `Playnite.Playnite` | Meta-launcher: unifica todas tus bibliotecas. |
 
 ---
 

@@ -2,7 +2,7 @@
 .SYNOPSIS
     Instala automaticamente, en modo silencioso, los principales launchers de
     videojuegos para Windows (Steam, Epic, EA app, Ubisoft, GOG, Battle.net,
-    Amazon Games, Rockstar, Xbox, itch.io, Playnite, Paradox...).
+    Amazon Games, Rockstar, Xbox, itch.io, Playnite...).
 
 .DESCRIPTION
     Usa winget (Windows Package Manager) como motor principal de instalacion
@@ -21,6 +21,13 @@
 
 .PARAMETER NoFallback
     Desactiva la descarga directa de respaldo: usa unicamente winget.
+
+.PARAMETER Update
+    En lugar de instalar, actualiza (winget upgrade) los launchers seleccionados
+    que ya esten instalados.
+
+.PARAMETER DryRun
+    Simula la operacion: muestra que se haria sin instalar ni actualizar nada.
 
 .EXAMPLE
     powershell -ExecutionPolicy Bypass -File .\Install-GameLaunchers.ps1
@@ -41,13 +48,15 @@
 param(
     [switch]$All,
     [switch]$List,
-    [switch]$NoFallback
+    [switch]$NoFallback,
+    [switch]$Update,
+    [switch]$DryRun
 )
 
 # ---------------------------------------------------------------------------
 # Constantes y rutas
 # ---------------------------------------------------------------------------
-$ScriptVersion = '1.0.0'
+$ScriptVersion = '1.1.0'
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $LogFile = Join-Path $ScriptRoot 'Install-GameLaunchers.log'
 
@@ -75,11 +84,6 @@ $Launchers = @(
         Name = 'EA app'; WingetId = 'ElectronicArts.EADesktop'; WingetSource = 'winget'
         FallbackUrl = $null
         FallbackArgs = @(); Notes = 'Sustituto de Origin. Preferir winget (silent directo fragil).'
-    }
-    [pscustomobject]@{
-        Name = 'Origin (legacy)'; WingetId = 'ElectronicArts.Origin'; WingetSource = 'winget'
-        FallbackUrl = $null
-        FallbackArgs = @(); Notes = 'Cliente antiguo de EA; reemplazado por EA app.'
     }
     [pscustomobject]@{
         Name = 'Ubisoft Connect'; WingetId = 'Ubisoft.Connect'; WingetSource = 'winget'
@@ -120,11 +124,6 @@ $Launchers = @(
         Name = 'Playnite'; WingetId = 'Playnite.Playnite'; WingetSource = 'winget'
         FallbackUrl = $null
         FallbackArgs = @('/VERYSILENT', '/NORESTART'); Notes = 'Meta-launcher: unifica todas tus bibliotecas.'
-    }
-    [pscustomobject]@{
-        Name = 'Paradox Launcher'; WingetId = 'ParadoxInteractive.ParadoxLauncher'; WingetSource = 'winget'
-        FallbackUrl = $null
-        FallbackArgs = @(); Notes = 'Cliente de Paradox Interactive. Verificar ID en winget.'
     }
 )
 
@@ -210,8 +209,25 @@ function Initialize-Winget {
     return $true
 }
 
+# Devuelve $true si el launcher ya aparece como instalado segun winget.
+# Cachea el listado completo de winget para no llamarlo una vez por launcher.
+$script:WingetListCache = $null
+function Test-LauncherInstalled {
+    param([Parameter(Mandatory)] $Launcher)
+
+    if (-not (Test-Winget)) { return $false }
+    if ($null -eq $script:WingetListCache) {
+        try {
+            $script:WingetListCache = (& winget.exe list --disable-interactivity 2>$null | Out-String)
+        } catch {
+            $script:WingetListCache = ''
+        }
+    }
+    return $script:WingetListCache -match [regex]::Escape($Launcher.WingetId)
+}
+
 # ---------------------------------------------------------------------------
-# Instalacion de un launcher
+# Instalacion / actualizacion de un launcher
 # ---------------------------------------------------------------------------
 function Install-ViaWinget {
     param([Parameter(Mandatory)] $Launcher)
@@ -231,6 +247,26 @@ function Install-ViaWinget {
     if ($code -eq 0) { return @{ Ok = $true; Status = 'Instalado (winget)' } }
     if ($code -eq -1978335189) { return @{ Ok = $true; Status = 'Ya estaba instalado' } }
     return @{ Ok = $false; Status = "winget fallo (codigo $code)" }
+}
+
+function Update-ViaWinget {
+    param([Parameter(Mandatory)] $Launcher)
+
+    $wgArgs = @(
+        'upgrade', '--id', $Launcher.WingetId, '--source', $Launcher.WingetSource,
+        '--silent', '--accept-package-agreements', '--accept-source-agreements',
+        '--disable-interactivity'
+    )
+    if ($Launcher.WingetSource -eq 'winget') { $wgArgs += '--exact' }
+
+    Write-Log "winget $($wgArgs -join ' ')" -Level INFO -NoConsole
+    & winget.exe @wgArgs 2>&1 | ForEach-Object { Write-Log ([string]$_) -Level INFO -NoConsole }
+    $code = $LASTEXITCODE
+
+    if ($code -eq 0) { return @{ Ok = $true; Status = 'Actualizado (winget)' } }
+    # -1978335189 = no hay actualizacion aplicable (ya esta al dia).
+    if ($code -eq -1978335189) { return @{ Ok = $true; Status = 'Ya estaba al dia' } }
+    return @{ Ok = $false; Status = "Actualizacion fallo (codigo $code)" }
 }
 
 function Install-ViaFallback {
@@ -277,11 +313,36 @@ function Install-ViaFallback {
 function Install-Launcher {
     param(
         [Parameter(Mandatory)] $Launcher,
-        [bool]$WingetAvailable
+        [bool]$WingetAvailable,
+        [int]$Index = 0,
+        [int]$Total = 0
     )
 
+    $progress = if ($Total -gt 0) { "[$Index/$Total] " } else { '' }
     Write-Host ''
-    Write-Host ">> $($Launcher.Name)" -ForegroundColor White
+    Write-Host "$progress>> $($Launcher.Name)" -ForegroundColor White
+
+    # Modo simulacion: no toca el sistema.
+    if ($DryRun) {
+        $action = if ($Update) { 'actualizaria' } else { 'instalaria' }
+        $status = "Simulado: se $action via $($Launcher.WingetSource)"
+        Write-Log "$($Launcher.Name): $status" -Level INFO -Color Cyan
+        return $status
+    }
+
+    # Modo actualizacion: solo winget upgrade.
+    if ($Update) {
+        if (-not $WingetAvailable) {
+            $status = 'Update requiere winget (no disponible)'
+            Write-Log "$($Launcher.Name): $status" -Level ERROR -Color Red
+            return $status
+        }
+        $up = Update-ViaWinget -Launcher $Launcher
+        $lvl = if ($up.Ok) { 'OK' } else { 'ERROR' }
+        $col = if ($up.Ok) { 'Green' } else { 'Red' }
+        Write-Log "$($Launcher.Name): $($up.Status)" -Level $lvl -Color $col
+        return $up.Status
+    }
 
     $result = $null
     if ($WingetAvailable) {
@@ -312,12 +373,26 @@ function Install-Launcher {
 # Catalogo / menu
 # ---------------------------------------------------------------------------
 function Show-Catalog {
-    Write-Host 'Launchers disponibles:' -ForegroundColor Cyan
+    $canDetect = Test-Winget
+    if ($canDetect) {
+        Write-Host 'Launchers disponibles (estado segun winget):' -ForegroundColor Cyan
+    } else {
+        Write-Host 'Launchers disponibles:' -ForegroundColor Cyan
+    }
     for ($i = 0; $i -lt $Launchers.Count; $i++) {
         $n = '{0,2}' -f ($i + 1)
-        Write-Host ("  [{0}] {1,-26} {2}" -f $n, $Launchers[$i].Name, $Launchers[$i].Notes) -ForegroundColor Gray
+        if ($canDetect -and (Test-LauncherInstalled -Launcher $Launchers[$i])) {
+            $tag = '[OK] '; $color = 'Green'
+        } else {
+            $tag = '[  ] '; $color = 'Gray'
+        }
+        Write-Host ("  {0}[{1}] {2,-26} {3}" -f $tag, $n, $Launchers[$i].Name, $Launchers[$i].Notes) -ForegroundColor $color
     }
     Write-Host ''
+    if ($canDetect) {
+        Write-Host '  [OK] = ya instalado' -ForegroundColor DarkGray
+        Write-Host ''
+    }
 }
 
 function Select-Launchers {
@@ -356,7 +431,7 @@ function Show-Summary {
     Write-Host '  RESUMEN' -ForegroundColor Cyan
     Write-Host ('-' * 64) -ForegroundColor DarkCyan
     foreach ($r in $Results) {
-        $ok = $r.Status -match 'Instalado|Ya estaba'
+        $ok = $r.Status -match 'Instalado|Ya estaba|Actualizado|al dia|Simulado'
         $color = if ($ok) { 'Green' } else { 'Red' }
         $mark = if ($ok) { 'OK ' } else { '!! ' }
         Write-Host ("  {0}{1,-26} {2}" -f $mark, $r.Name, $r.Status) -ForegroundColor $color
@@ -375,13 +450,17 @@ if ($List) {
     return
 }
 
-Invoke-SelfElevation
+# -DryRun no toca el sistema, asi que no necesita permisos de Administrador.
+if (-not $DryRun) { Invoke-SelfElevation }
 
 Write-Log "=== Inicio de ejecucion (v$ScriptVersion) ===" -Level INFO -NoConsole
 
 $wingetOk = Initialize-Winget
 if ($wingetOk) {
     Write-Log 'winget disponible: se usara como motor principal.' -Level INFO -Color Green
+} elseif ($Update) {
+    Write-Host 'La actualizacion (-Update) requiere winget, que no esta disponible.' -ForegroundColor Red
+    return
 } elseif ($NoFallback) {
     Write-Host 'No hay winget y -NoFallback esta activo: nada que instalar.' -ForegroundColor Red
     return
@@ -394,12 +473,15 @@ if (-not $toInstall -or $toInstall.Count -eq 0) {
     return
 }
 
+$verbo = if ($DryRun) { 'simularan' } elseif ($Update) { 'actualizaran' } else { 'instalaran' }
 Write-Host ''
-Write-Host "Se instalaran $($toInstall.Count) launcher(s)..." -ForegroundColor Cyan
+Write-Host "Se $verbo $($toInstall.Count) launcher(s)..." -ForegroundColor Cyan
 
+$total = $toInstall.Count
 $results = [System.Collections.Generic.List[object]]::new()
-foreach ($launcher in $toInstall) {
-    $status = Install-Launcher -Launcher $launcher -WingetAvailable $wingetOk
+for ($i = 0; $i -lt $total; $i++) {
+    $launcher = $toInstall[$i]
+    $status = Install-Launcher -Launcher $launcher -WingetAvailable $wingetOk -Index ($i + 1) -Total $total
     $results.Add([pscustomobject]@{ Name = $launcher.Name; Status = $status })
 }
 
