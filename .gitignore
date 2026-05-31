@@ -1,0 +1,12 @@
+# Logs generados en tiempo de ejecucion
+*.log
+
+# Instaladores temporales descargados por el fallback
+launxers_*.exe
+launxers_*.msi
+*.tmp
+
+# Artefactos del sistema operativo
+Thumbs.db
+desktop.ini
+.DS_Store
