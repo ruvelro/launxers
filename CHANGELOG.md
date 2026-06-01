@@ -7,6 +7,14 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+## [1.1.2] - 2026-06-01
+
+### Fixed
+- **Battle.net** fallaba con `INSTALLER_HASH_MISMATCH` (0x8A150011): el
+  bootstrapper online de Blizzard cambia con frecuencia y el hash del manifiesto
+  de winget queda obsoleto. Se añade `--force` a sus `WingetExtraArgs` para
+  anular la comprobación de hash (además del `--location` ya existente).
+
 ## [1.1.1] - 2026-06-01
 
 ### Fixed
@@ -63,7 +71,8 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
   desarrollo y reglas de mantenimiento), `CLAUDE.md` (puntero a `AGENTS.md`),
   `LICENSE` (MIT) y este `CHANGELOG.md`.
 
-[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.1...HEAD
+[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.2...HEAD
+[1.1.2]: https://github.com/ruvelro/launxers/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/ruvelro/launxers/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/ruvelro/launxers/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/ruvelro/launxers/releases/tag/v1.0.0
