@@ -37,8 +37,8 @@ Secciones, en orden, dentro de `Install-GameLaunchers.ps1`:
 3. **Catálogo `$Launchers`**: array de `pscustomobject` (ver abajo).
 4. **Utilidades**: `Write-Log`, `Write-Banner`.
 5. **Auto-elevación**: `Test-Admin`, `Invoke-SelfElevation`.
-6. **winget**: `Test-Winget`, `Initialize-Winget`, `Test-LauncherInstalled` (detección de instalados con caché de `winget list`).
-7. **Instalación/actualización**: `Install-ViaWinget`, `Update-ViaWinget`, `Install-ViaFallback`, `Install-Launcher` (gestiona `-Update`, `-DryRun` y el contador de progreso).
+6. **winget**: `Test-Winget`, `Initialize-Winget`, `Invoke-Winget` (ejecuta winget y registra su salida sin líneas vacías), `Test-InstalledNow` (comprobación en caliente), `Test-LauncherInstalled` (detección cacheada para el catálogo). Listas `$script:WingetBenignCodes` / `$script:WingetRebootCodes` para clasificar exit codes.
+7. **Instalación/actualización**: `Install-ViaWinget` (con verificación post-fallo), `Update-ViaWinget`, `Install-ViaFallback`, `Install-Launcher` (gestiona `-Update`, `-DryRun` y el contador de progreso).
 8. **UI**: `Show-Catalog` (muestra estado `[OK]`), `Select-Launchers`, `Show-Summary`.
 9. **MAIN**: flujo principal al final del archivo.
 
@@ -49,8 +49,9 @@ Añade un `pscustomobject` al array `$Launchers` con estos campos:
 | Campo | Descripción |
 |---|---|
 | `Name` | Nombre visible en menú/resumen. |
-| `WingetId` | ID en el repositorio de winget (motor principal). |
+| `WingetId` | ID en el repositorio de winget (motor principal). Verifícalo en winget-pkgs. |
 | `WingetSource` | `'winget'` (por defecto) o `'msstore'` (apps de la Store). |
+| `WingetExtraArgs` | (Opcional) Argumentos extra para winget, p. ej. `@('--location', '<ruta>')` cuando el paquete lo exige (Battle.net). |
 | `FallbackUrl` | URL directa del instalador oficial, o `$null` si no hay. |
 | `FallbackArgs` | Array de flags silenciosos (`@('/S')`, `@('/quiet','/norestart')`...). |
 | `Notes` | Aclaración breve mostrada en el catálogo. |

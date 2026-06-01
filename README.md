@@ -9,7 +9,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE?logo=powershell&logoColor=white)
 ![winget](https://img.shields.io/badge/winget-powered-blueviolet)
-![Versión](https://img.shields.io/badge/versión-1.1.0-success)
+![Versión](https://img.shields.io/badge/versión-1.1.1-success)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
 </div>
@@ -73,7 +73,7 @@ Recuerda anteponer `powershell -ExecutionPolicy Bypass -File` si tu política de
 | 5 | **GOG Galaxy** | `GOG.Galaxy` | Juegos sin DRM. |
 | 6 | **Battle.net** | `Blizzard.BattleNet` | Blizzard. Solo winget. |
 | 7 | **Amazon Games** | `Amazon.Games` | Incluye Prime Gaming. |
-| 8 | **Rockstar Launcher** | `RockstarGames.RockstarGamesLauncher` | GTA, Red Dead… |
+| 8 | **Rockstar Launcher** | `RockstarGames.Launcher` | GTA, Red Dead… |
 | 9 | **Xbox / Game Pass** | `9MV0B5HZVK9Z` (Store) | App Xbox vía Microsoft Store. |
 | 10 | **itch.io** | `ItchIo.Itch` | Juegos indie. |
 | 11 | **Playnite** | `Playnite.Playnite` | Meta-launcher: unifica todas tus bibliotecas. |
@@ -111,7 +111,24 @@ En `Install-GameLaunchers.log`, junto al script. Cada ejecución añade entradas
 <details>
 <summary><b>¿Se puede volver a ejecutar sin problemas?</b></summary>
 
-Sí. Es idempotente: winget detecta lo ya instalado y lo omite.
+Sí. Es idempotente: winget detecta lo ya instalado y lo omite. Si un launcher ya
+está, el resumen lo marca como *Ya estaba instalado*.
+</details>
+
+<details>
+<summary><b>La app de Xbox falla con un error de certificado, ¿por qué?</b></summary>
+
+Es un problema de la fuente **msstore** de winget en tu equipo/red (certificado
+fijado), no del script. La app Xbox suele venir **preinstalada** en Windows; si
+no, instálala desde Microsoft Store. El script verifica si ya está presente y, en
+ese caso, la marca como instalada igualmente.
+</details>
+
+<details>
+<summary><b>Veo "Instalado (requiere reinicio)", ¿qué hago?</b></summary>
+
+La instalación se completó pero ese launcher pide reiniciar para terminar.
+Reinicia Windows cuando te venga bien.
 </details>
 
 ---

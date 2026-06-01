@@ -56,9 +56,13 @@ param(
 # ---------------------------------------------------------------------------
 # Constantes y rutas
 # ---------------------------------------------------------------------------
-$ScriptVersion = '1.1.0'
+$ScriptVersion = '1.1.1'
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $LogFile = Join-Path $ScriptRoot 'Install-GameLaunchers.log'
+
+# Base "Program Files (x86)" con respaldo por si no existe (Windows de 32 bits).
+$ProgramFilesX86 = ${env:ProgramFiles(x86)}
+if ([string]::IsNullOrEmpty($ProgramFilesX86)) { $ProgramFilesX86 = $env:ProgramFiles }
 
 # ---------------------------------------------------------------------------
 # Catalogo de launchers
@@ -97,8 +101,9 @@ $Launchers = @(
     }
     [pscustomobject]@{
         Name = 'Battle.net'; WingetId = 'Blizzard.BattleNet'; WingetSource = 'winget'
+        WingetExtraArgs = @('--location', (Join-Path $ProgramFilesX86 'Battle.net'))
         FallbackUrl = $null
-        FallbackArgs = @(); Notes = 'Cliente de Blizzard. Solo winget (silent directo muy fragil).'
+        FallbackArgs = @(); Notes = 'Cliente de Blizzard. winget requiere --location.'
     }
     [pscustomobject]@{
         Name = 'Amazon Games'; WingetId = 'Amazon.Games'; WingetSource = 'winget'
@@ -106,14 +111,14 @@ $Launchers = @(
         FallbackArgs = @('/S'); Notes = 'Incluye juegos de Prime Gaming.'
     }
     [pscustomobject]@{
-        Name = 'Rockstar Games Launcher'; WingetId = 'RockstarGames.RockstarGamesLauncher'; WingetSource = 'winget'
-        FallbackUrl = 'https://gamedownloads.rockstargames.com/public/installer/RSGL/Rockstar-Games-Launcher.exe'
-        FallbackArgs = @('/S'); Notes = 'GTA, Red Dead, etc.'
+        Name = 'Rockstar Games Launcher'; WingetId = 'RockstarGames.Launcher'; WingetSource = 'winget'
+        FallbackUrl = $null
+        FallbackArgs = @('/S'); Notes = 'GTA, Red Dead, etc. (winget; URL directa no estable).'
     }
     [pscustomobject]@{
         Name = 'Xbox / Game Pass'; WingetId = '9MV0B5HZVK9Z'; WingetSource = 'msstore'
         FallbackUrl = $null
-        FallbackArgs = @(); Notes = 'App Xbox (Game Pass). Via Microsoft Store.'
+        FallbackArgs = @(); Notes = 'App Xbox (Game Pass). Suele venir preinstalada en Windows.'
     }
     [pscustomobject]@{
         Name = 'itch.io'; WingetId = 'ItchIo.Itch'; WingetSource = 'winget'
@@ -132,7 +137,7 @@ $Launchers = @(
 # ---------------------------------------------------------------------------
 function Write-Log {
     param(
-        [Parameter(Mandatory)] [string]$Message,
+        [Parameter(Mandatory)] [AllowEmptyString()] [string]$Message,
         [ValidateSet('INFO', 'WARN', 'ERROR', 'OK')] [string]$Level = 'INFO',
         [System.ConsoleColor]$Color = 'Gray',
         [switch]$NoConsole
@@ -209,8 +214,41 @@ function Initialize-Winget {
     return $true
 }
 
-# Devuelve $true si el launcher ya aparece como instalado segun winget.
-# Cachea el listado completo de winget para no llamarlo una vez por launcher.
+# Codigos de salida de winget que tratamos como "ya instalado / sin accion".
+$script:WingetBenignCodes = @(
+    -1978335189,  # 0x8A15002B UPDATE_NOT_APPLICABLE: ya instalado y al dia
+    -1978335135,  # 0x8A150061 PACKAGE_ALREADY_INSTALLED
+    -1978334963,  # 0x8A15010D INSTALL_ALREADY_INSTALLED
+    -1978334962   # 0x8A15010E INSTALL_DOWNGRADE: ya hay una version superior
+)
+# Codigos que indican instalacion correcta pero con reinicio pendiente.
+$script:WingetRebootCodes = @(
+    -1978334967,  # 0x8A150109 REBOOT_REQUIRED_TO_FINISH
+    -1978334966,  # 0x8A15010A REBOOT_REQUIRED_FOR_INSTALL
+    -1978334965   # 0x8A15010B REBOOT_INITIATED
+)
+
+# Ejecuta winget, registra su salida (sin lineas vacias) y devuelve el exit code.
+function Invoke-Winget {
+    param([Parameter(Mandatory)] [string[]]$Arguments)
+    Write-Log "winget $($Arguments -join ' ')" -Level INFO -NoConsole
+    & winget.exe @Arguments 2>&1 |
+        Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
+        ForEach-Object { Write-Log ([string]$_) -Level INFO -NoConsole }
+    return $LASTEXITCODE
+}
+
+# Comprueba en caliente (sin cache) si el launcher esta instalado segun winget.
+function Test-InstalledNow {
+    param([Parameter(Mandatory)] $Launcher)
+    if (-not (Test-Winget)) { return $false }
+    try {
+        & winget.exe list --id $Launcher.WingetId --exact --disable-interactivity 2>$null | Out-Null
+        return ($LASTEXITCODE -eq 0)
+    } catch { return $false }
+}
+
+# Version cacheada para pintar el estado del catalogo de un vistazo.
 $script:WingetListCache = $null
 function Test-LauncherInstalled {
     param([Parameter(Mandatory)] $Launcher)
@@ -238,14 +276,15 @@ function Install-ViaWinget {
         '--disable-interactivity'
     )
     if ($Launcher.WingetSource -eq 'winget') { $wgArgs += '--exact' }
+    if ($Launcher.WingetExtraArgs) { $wgArgs += $Launcher.WingetExtraArgs }
 
-    Write-Log "winget $($wgArgs -join ' ')" -Level INFO -NoConsole
-    & winget.exe @wgArgs 2>&1 | ForEach-Object { Write-Log ([string]$_) -Level INFO -NoConsole }
-    $code = $LASTEXITCODE
+    $code = Invoke-Winget -Arguments $wgArgs
 
-    # 0 = ok; -1978335189 (0x8A15002B) = ya instalado / no aplicable update
     if ($code -eq 0) { return @{ Ok = $true; Status = 'Instalado (winget)' } }
-    if ($code -eq -1978335189) { return @{ Ok = $true; Status = 'Ya estaba instalado' } }
+    if ($script:WingetBenignCodes -contains $code) { return @{ Ok = $true; Status = 'Ya estaba instalado' } }
+    if ($script:WingetRebootCodes -contains $code) { return @{ Ok = $true; Status = 'Instalado (requiere reinicio)' } }
+    # Ultimo recurso: aunque winget devuelva error, comprobar si quedo instalado.
+    if (Test-InstalledNow -Launcher $Launcher) { return @{ Ok = $true; Status = 'Ya estaba instalado' } }
     return @{ Ok = $false; Status = "winget fallo (codigo $code)" }
 }
 
@@ -259,13 +298,10 @@ function Update-ViaWinget {
     )
     if ($Launcher.WingetSource -eq 'winget') { $wgArgs += '--exact' }
 
-    Write-Log "winget $($wgArgs -join ' ')" -Level INFO -NoConsole
-    & winget.exe @wgArgs 2>&1 | ForEach-Object { Write-Log ([string]$_) -Level INFO -NoConsole }
-    $code = $LASTEXITCODE
+    $code = Invoke-Winget -Arguments $wgArgs
 
     if ($code -eq 0) { return @{ Ok = $true; Status = 'Actualizado (winget)' } }
-    # -1978335189 = no hay actualizacion aplicable (ya esta al dia).
-    if ($code -eq -1978335189) { return @{ Ok = $true; Status = 'Ya estaba al dia' } }
+    if ($script:WingetBenignCodes -contains $code) { return @{ Ok = $true; Status = 'Ya estaba al dia' } }
     return @{ Ok = $false; Status = "Actualizacion fallo (codigo $code)" }
 }
 
