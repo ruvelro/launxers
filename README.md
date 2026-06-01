@@ -9,7 +9,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE?logo=powershell&logoColor=white)
 ![winget](https://img.shields.io/badge/winget-powered-blueviolet)
-![Versión](https://img.shields.io/badge/versión-1.1.3-success)
+![Versión](https://img.shields.io/badge/versión-1.1.4-success)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
 </div>
@@ -122,6 +122,16 @@ Es un problema de la fuente **msstore** de winget en tu equipo/red (certificado
 fijado), no del script. La app Xbox suele venir **preinstalada** en Windows; si
 no, instálala desde Microsoft Store. El script verifica si ya está presente y, en
 ese caso, la marca como instalada igualmente.
+</details>
+
+<details>
+<summary><b>Battle.net no termina de instalarse en silencio</b></summary>
+
+El instalador de Battle.net es un *bootstrapper* online de Blizzard que cambia a
+menudo, y su instalación silenciosa es poco fiable. El script lo intenta primero
+con winget (saltándose la comprobación de hash) y, si falla, **descarga el
+instalador oficial y lo abre**; en ese caso puede que tengas que pulsar un par de
+veces para completarlo. Es el único launcher que a veces no es 100% desatendido.
 </details>
 
 <details>

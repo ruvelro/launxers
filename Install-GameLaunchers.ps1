@@ -56,7 +56,7 @@ param(
 # ---------------------------------------------------------------------------
 # Constantes y rutas
 # ---------------------------------------------------------------------------
-$ScriptVersion = '1.1.3'
+$ScriptVersion = '1.1.4'
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $LogFile = Join-Path $ScriptRoot 'Install-GameLaunchers.log'
 
@@ -101,9 +101,9 @@ $Launchers = @(
     }
     [pscustomobject]@{
         Name = 'Battle.net'; WingetId = 'Blizzard.BattleNet'; WingetSource = 'winget'
-        WingetExtraArgs = @('--location', (Join-Path $ProgramFilesX86 'Battle.net'), '--force')
-        FallbackUrl = $null
-        FallbackArgs = @(); Notes = 'Cliente de Blizzard. winget requiere --location y --force (hash del bootstrapper cambia a menudo).'
+        WingetExtraArgs = @('--location', (Join-Path $ProgramFilesX86 'Battle.net'), '--force', '--ignore-security-hash')
+        FallbackUrl = 'https://www.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=Live'
+        FallbackArgs = @(); Notes = 'Cliente de Blizzard.'
     }
     [pscustomobject]@{
         Name = 'Amazon Games'; WingetId = 'Amazon.Games'; WingetSource = 'winget'

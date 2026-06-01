@@ -7,6 +7,19 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+## [1.1.4] - 2026-06-01
+
+### Fixed
+- **Battle.net** seguía fallando con `INSTALLER_HASH_MISMATCH` pese a `--force`:
+  ahora se añade también `--ignore-security-hash`, y como red de seguridad se
+  configura una **descarga directa del instalador oficial** de Blizzard
+  (`getInstallerForGame`) por si winget no consigue instalarlo.
+
+### Changed
+- Descripción de Battle.net en el catálogo simplificada a "Cliente de Blizzard."
+- Nueva entrada de FAQ en el README explicando que Battle.net puede no ser 100%
+  desatendido.
+
 ## [1.1.3] - 2026-06-01
 
 ### Fixed
@@ -88,7 +101,8 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
   desarrollo y reglas de mantenimiento), `CLAUDE.md` (puntero a `AGENTS.md`),
   `LICENSE` (MIT) y este `CHANGELOG.md`.
 
-[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.3...HEAD
+[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.4...HEAD
+[1.1.4]: https://github.com/ruvelro/launxers/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/ruvelro/launxers/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/ruvelro/launxers/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/ruvelro/launxers/compare/v1.1.0...v1.1.1
