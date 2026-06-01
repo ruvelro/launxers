@@ -7,6 +7,23 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+## [1.1.3] - 2026-06-01
+
+### Fixed
+- **Bloqueo en consolas elevadas por UAC**: al capturar la salida de `winget`
+  desde una consola recién elevada, el script se quedaba colgado en la pantalla
+  "Launchers disponibles" (durante `winget list`). Ahora todas las llamadas a
+  winget (detección de instalados e instalación/actualización) se ejecutan en
+  *jobs* en segundo plano sin consola, con timeout de seguridad, de modo que
+  nunca pueden bloquear el script.
+
+### Changed
+- La detección de estado del catálogo (`Initialize-WingetListCache`) corre en un
+  job con límite de 25 s; si no responde, el menú se muestra sin marcadores
+  `[OK]` y la ejecución continúa.
+- `Invoke-Winget` admite `-TimeoutSeconds` (1200 s por defecto; 60 s para las
+  comprobaciones de estado) y añade `--accept-source-agreements` a las consultas.
+
 ## [1.1.2] - 2026-06-01
 
 ### Fixed
@@ -71,7 +88,8 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
   desarrollo y reglas de mantenimiento), `CLAUDE.md` (puntero a `AGENTS.md`),
   `LICENSE` (MIT) y este `CHANGELOG.md`.
 
-[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.2...HEAD
+[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/ruvelro/launxers/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/ruvelro/launxers/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/ruvelro/launxers/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/ruvelro/launxers/compare/v1.0.0...v1.1.0

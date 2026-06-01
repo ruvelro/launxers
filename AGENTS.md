@@ -37,7 +37,7 @@ Secciones, en orden, dentro de `Install-GameLaunchers.ps1`:
 3. **Catálogo `$Launchers`**: array de `pscustomobject` (ver abajo).
 4. **Utilidades**: `Write-Log`, `Write-Banner`.
 5. **Auto-elevación**: `Test-Admin`, `Invoke-SelfElevation`.
-6. **winget**: `Test-Winget`, `Initialize-Winget`, `Invoke-Winget` (ejecuta winget y registra su salida sin líneas vacías), `Test-InstalledNow` (comprobación en caliente), `Test-LauncherInstalled` (detección cacheada para el catálogo). Listas `$script:WingetBenignCodes` / `$script:WingetRebootCodes` para clasificar exit codes.
+6. **winget**: `Test-Winget`, `Initialize-Winget`, `Invoke-Winget` (ejecuta winget en un **job** en segundo plano con `-TimeoutSeconds` para evitar cuelgues en consolas elevadas por UAC), `Test-InstalledNow` (comprobación en caliente), `Initialize-WingetListCache` (carga el listado en un job con timeout) + `Test-LauncherInstalled` (consulta la caché). Listas `$script:WingetBenignCodes` / `$script:WingetRebootCodes` para clasificar exit codes.
 7. **Instalación/actualización**: `Install-ViaWinget` (con verificación post-fallo), `Update-ViaWinget`, `Install-ViaFallback`, `Install-Launcher` (gestiona `-Update`, `-DryRun` y el contador de progreso).
 8. **UI**: `Show-Catalog` (muestra estado `[OK]`), `Select-Launchers`, `Show-Summary`.
 9. **MAIN**: flujo principal al final del archivo.

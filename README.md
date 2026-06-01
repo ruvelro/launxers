@@ -9,7 +9,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE?logo=powershell&logoColor=white)
 ![winget](https://img.shields.io/badge/winget-powered-blueviolet)
-![Versión](https://img.shields.io/badge/versión-1.1.2-success)
+![Versión](https://img.shields.io/badge/versión-1.1.3-success)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
 </div>

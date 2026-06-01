@@ -56,7 +56,7 @@ param(
 # ---------------------------------------------------------------------------
 # Constantes y rutas
 # ---------------------------------------------------------------------------
-$ScriptVersion = '1.1.2'
+$ScriptVersion = '1.1.3'
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $LogFile = Join-Path $ScriptRoot 'Install-GameLaunchers.log'
 
@@ -228,39 +228,80 @@ $script:WingetRebootCodes = @(
     -1978334965   # 0x8A15010B REBOOT_INITIATED
 )
 
-# Ejecuta winget, registra su salida (sin lineas vacias) y devuelve el exit code.
+# Ejecuta winget en un job en segundo plano (sin consola), registra su salida y
+# devuelve el exit code. Hacerlo en un job evita que winget se cuelgue al capturar
+# su salida en consolas elevadas por UAC, y permite un timeout de seguridad.
 function Invoke-Winget {
-    param([Parameter(Mandatory)] [string[]]$Arguments)
+    param(
+        [Parameter(Mandatory)] [string[]]$Arguments,
+        [int]$TimeoutSeconds = 1200
+    )
     Write-Log "winget $($Arguments -join ' ')" -Level INFO -NoConsole
-    & winget.exe @Arguments 2>&1 |
-        Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
-        ForEach-Object { Write-Log ([string]$_) -Level INFO -NoConsole }
-    return $LASTEXITCODE
+    try {
+        $job = Start-Job -ScriptBlock {
+            param($wgArgs)
+            $out = & winget.exe @wgArgs 2>&1 | Out-String
+            [pscustomobject]@{ Code = $LASTEXITCODE; Output = $out }
+        } -ArgumentList (, $Arguments)
+
+        if (-not (Wait-Job $job -Timeout $TimeoutSeconds)) {
+            Stop-Job $job -ErrorAction SilentlyContinue
+            Remove-Job $job -Force -ErrorAction SilentlyContinue
+            Write-Log "winget excedio el tiempo limite ($TimeoutSeconds s) y se cancelo." -Level ERROR -NoConsole
+            return 1
+        }
+
+        $r = Receive-Job $job -ErrorAction SilentlyContinue
+        Remove-Job $job -Force -ErrorAction SilentlyContinue
+        if ($null -eq $r) { return 1 }
+
+        if ($r.Output) {
+            $r.Output -split "`r?`n" |
+                Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                ForEach-Object { Write-Log $_ -Level INFO -NoConsole }
+        }
+        return [int]$r.Code
+    } catch {
+        Write-Log "Error ejecutando winget: $($_.Exception.Message)" -Level ERROR -NoConsole
+        return 1
+    }
 }
 
 # Comprueba en caliente (sin cache) si el launcher esta instalado segun winget.
 function Test-InstalledNow {
     param([Parameter(Mandatory)] $Launcher)
     if (-not (Test-Winget)) { return $false }
-    try {
-        & winget.exe list --id $Launcher.WingetId --exact --disable-interactivity 2>$null | Out-Null
-        return ($LASTEXITCODE -eq 0)
-    } catch { return $false }
+    $code = Invoke-Winget -Arguments @(
+        'list', '--id', $Launcher.WingetId, '--exact',
+        '--accept-source-agreements', '--disable-interactivity'
+    ) -TimeoutSeconds 60
+    return ($code -eq 0)
 }
 
-# Version cacheada para pintar el estado del catalogo de un vistazo.
+# Carga (una sola vez y con limite de tiempo) el listado de winget para detectar
+# que launchers ya estan instalados. Se ejecuta en un job aparte para que NUNCA
+# bloquee el script: en consolas elevadas por UAC 'winget list' puede colgarse al
+# capturar su salida, asi que si tarda demasiado se descarta la deteccion.
 $script:WingetListCache = $null
+function Initialize-WingetListCache {
+    if ($null -ne $script:WingetListCache) { return }
+    $script:WingetListCache = ''   # por defecto: sin deteccion
+    if (-not (Test-Winget)) { return }
+    try {
+        $job = Start-Job -ScriptBlock {
+            winget list --accept-source-agreements --disable-interactivity 2>$null | Out-String
+        }
+        if (Wait-Job $job -Timeout 25) {
+            $out = Receive-Job $job -ErrorAction SilentlyContinue
+            if ($out) { $script:WingetListCache = [string]$out }
+        }
+        Remove-Job $job -Force -ErrorAction SilentlyContinue
+    } catch { }
+}
+
 function Test-LauncherInstalled {
     param([Parameter(Mandatory)] $Launcher)
-
-    if (-not (Test-Winget)) { return $false }
-    if ($null -eq $script:WingetListCache) {
-        try {
-            $script:WingetListCache = (& winget.exe list --disable-interactivity 2>$null | Out-String)
-        } catch {
-            $script:WingetListCache = ''
-        }
-    }
+    if ([string]::IsNullOrEmpty($script:WingetListCache)) { return $false }
     return $script:WingetListCache -match [regex]::Escape($Launcher.WingetId)
 }
 
@@ -409,7 +450,11 @@ function Install-Launcher {
 # Catalogo / menu
 # ---------------------------------------------------------------------------
 function Show-Catalog {
-    $canDetect = Test-Winget
+    if (Test-Winget) {
+        Write-Host 'Comprobando estado de los launchers...' -ForegroundColor DarkGray
+        Initialize-WingetListCache
+    }
+    $canDetect = -not [string]::IsNullOrEmpty($script:WingetListCache)
     if ($canDetect) {
         Write-Host 'Launchers disponibles (estado segun winget):' -ForegroundColor Cyan
     } else {
