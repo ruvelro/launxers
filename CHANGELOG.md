@@ -7,6 +7,21 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+## [1.1.6] - 2026-06-01
+
+### Fixed
+- **Selección de un solo launcher** no funcionaba: al elegir un único número, la
+  lista de un elemento se "desenvolvía" a un escalar y el bucle de instalación no
+  lo recorría. Ahora la selección se fuerza a array con `@(...)`.
+- **Bloqueo tras instalar Battle.net**: su instalador es un *bootstrapper* que no
+  termina (lanza la app y sigue vivo), por lo que `Start-Process -Wait` se quedaba
+  esperando para siempre. Nuevo campo `FallbackNoWait`: se lanza el instalador y
+  el script continúa sin esperar (y sin borrar el archivo que sigue en uso).
+
+### Added
+- Campo de catálogo `FallbackNoWait` para instaladores que no finalizan su
+  proceso (bootstrappers).
+
 ## [1.1.5] - 2026-06-01
 
 ### Fixed
@@ -117,7 +132,8 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
   desarrollo y reglas de mantenimiento), `CLAUDE.md` (puntero a `AGENTS.md`),
   `LICENSE` (MIT) y este `CHANGELOG.md`.
 
-[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.5...HEAD
+[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.6...HEAD
+[1.1.6]: https://github.com/ruvelro/launxers/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/ruvelro/launxers/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/ruvelro/launxers/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/ruvelro/launxers/compare/v1.1.2...v1.1.3

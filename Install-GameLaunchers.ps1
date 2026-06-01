@@ -56,7 +56,7 @@ param(
 # ---------------------------------------------------------------------------
 # Constantes y rutas
 # ---------------------------------------------------------------------------
-$ScriptVersion = '1.1.5'
+$ScriptVersion = '1.1.6'
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $LogFile = Join-Path $ScriptRoot 'Install-GameLaunchers.log'
 
@@ -101,7 +101,8 @@ $Launchers = @(
     }
     [pscustomobject]@{
         Name = 'Battle.net'; WingetId = 'Blizzard.BattleNet'; WingetSource = 'winget'
-        SkipWinget = $true   # winget no puede saltarse el hash mismatch estando elevado
+        SkipWinget = $true       # winget no puede saltarse el hash mismatch estando elevado
+        FallbackNoWait = $true   # el instalador no termina: se lanza y se continua
         FallbackUrl = 'https://www.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=Live'
         FallbackArgs = @(); Notes = 'Cliente de Blizzard.'
     }
@@ -367,21 +368,39 @@ function Install-ViaFallback {
         return @{ Ok = $false; Status = "Descarga fallo: $($_.Exception.Message)" }
     }
 
+    $hasArgs = $Launcher.FallbackArgs -and @($Launcher.FallbackArgs).Count -gt 0
+    $keepFile = $false
     try {
         if ($isMsi) {
             $msiArgs = @('/i', "`"$dest`"") + $Launcher.FallbackArgs
             $p = Start-Process -FilePath 'msiexec.exe' -ArgumentList $msiArgs -Wait -PassThru
-        } elseif ($Launcher.FallbackArgs -and @($Launcher.FallbackArgs).Count -gt 0) {
+            $code = $p.ExitCode
+        }
+        elseif ($Launcher.FallbackNoWait) {
+            # Bootstrappers como Battle.net no terminan al instalar (lanzan la app
+            # y siguen vivos): se lanzan y el script continua sin esperar.
+            if ($hasArgs) {
+                Start-Process -FilePath $dest -ArgumentList $Launcher.FallbackArgs | Out-Null
+            } else {
+                Start-Process -FilePath $dest | Out-Null
+            }
+            Start-Sleep -Seconds 3
+            $keepFile = $true   # el instalador sigue usando el archivo
+            return @{ Ok = $true; Status = 'Instalador lanzado (continua aparte)' }
+        }
+        elseif ($hasArgs) {
             # -ArgumentList no admite arrays vacios: solo se pasa si hay flags.
             $p = Start-Process -FilePath $dest -ArgumentList $Launcher.FallbackArgs -Wait -PassThru
-        } else {
-            $p = Start-Process -FilePath $dest -Wait -PassThru
+            $code = $p.ExitCode
         }
-        $code = $p.ExitCode
+        else {
+            $p = Start-Process -FilePath $dest -Wait -PassThru
+            $code = $p.ExitCode
+        }
     } catch {
         return @{ Ok = $false; Status = "Ejecucion fallo: $($_.Exception.Message)" }
     } finally {
-        Remove-Item $dest -ErrorAction SilentlyContinue
+        if (-not $keepFile) { Remove-Item $dest -ErrorAction SilentlyContinue }
     }
 
     if ($code -eq 0 -or $code -eq 3010) {
@@ -560,9 +579,11 @@ if ($wingetOk) {
     return
 }
 
-$toInstall = if ($All) { $Launchers } else { Select-Launchers }
+# @(...) fuerza array: con una sola seleccion PowerShell devolveria un escalar y
+# el bucle de instalacion no lo recorreria correctamente.
+$toInstall = @(if ($All) { $Launchers } else { Select-Launchers })
 
-if (-not $toInstall -or $toInstall.Count -eq 0) {
+if ($toInstall.Count -eq 0) {
     Write-Host 'No se ha seleccionado ningun launcher. Saliendo.' -ForegroundColor Yellow
     return
 }
