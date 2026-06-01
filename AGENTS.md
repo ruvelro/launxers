@@ -51,7 +51,8 @@ Añade un `pscustomobject` al array `$Launchers` con estos campos:
 | `Name` | Nombre visible en menú/resumen. |
 | `WingetId` | ID en el repositorio de winget (motor principal). Verifícalo en winget-pkgs. |
 | `WingetSource` | `'winget'` (por defecto) o `'msstore'` (apps de la Store). |
-| `WingetExtraArgs` | (Opcional) Argumentos extra para winget, p. ej. `@('--location', '<ruta>')` cuando el paquete lo exige (Battle.net). |
+| `WingetExtraArgs` | (Opcional) Argumentos extra para winget, p. ej. `@('--location', '<ruta>')` cuando el paquete lo exige. |
+| `SkipWinget` | (Opcional) `$true` para omitir winget e instalar solo por descarga directa (p. ej. Battle.net, cuyo hash winget no puede saltarse estando elevado). |
 | `FallbackUrl` | URL directa del instalador oficial, o `$null` si no hay. |
 | `FallbackArgs` | Array de flags silenciosos (`@('/S')`, `@('/quiet','/norestart')`...). |
 | `Notes` | Aclaración breve mostrada en el catálogo. |

@@ -7,6 +7,22 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [No publicado]
 
+## [1.1.5] - 2026-06-01
+
+### Fixed
+- **Fallback roto** para launchers con `FallbackArgs` vacíos: `Start-Process
+  -ArgumentList @()` lanzaba "argumento null" y la descarga directa fallaba.
+  Ahora solo se pasa `-ArgumentList` cuando hay flags.
+- **Battle.net**: `--ignore-security-hash` provocaba `INVALID_CL_ARGUMENTS`
+  porque winget **no puede saltarse el hash mismatch estando elevado como
+  Administrador** (limitación conocida de winget-cli). Battle.net pasa a
+  instalarse **directamente desde el instalador oficial** de Blizzard, saltándose
+  winget (nuevo campo de catálogo `SkipWinget`).
+
+### Added
+- Campo de catálogo `SkipWinget`: fuerza a un launcher a instalarse por descarga
+  directa, omitiendo winget. `-Update` lo informa como no soportado para esos.
+
 ## [1.1.4] - 2026-06-01
 
 ### Fixed
@@ -101,7 +117,8 @@ y este proyecto sigue [Versionado Semántico](https://semver.org/lang/es/).
   desarrollo y reglas de mantenimiento), `CLAUDE.md` (puntero a `AGENTS.md`),
   `LICENSE` (MIT) y este `CHANGELOG.md`.
 
-[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.4...HEAD
+[No publicado]: https://github.com/ruvelro/launxers/compare/v1.1.5...HEAD
+[1.1.5]: https://github.com/ruvelro/launxers/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/ruvelro/launxers/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/ruvelro/launxers/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/ruvelro/launxers/compare/v1.1.1...v1.1.2

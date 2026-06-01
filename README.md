@@ -9,7 +9,7 @@
 ![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?logo=windows&logoColor=white)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE?logo=powershell&logoColor=white)
 ![winget](https://img.shields.io/badge/winget-powered-blueviolet)
-![Versión](https://img.shields.io/badge/versión-1.1.4-success)
+![Versión](https://img.shields.io/badge/versión-1.1.5-success)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 
 </div>
@@ -127,11 +127,14 @@ ese caso, la marca como instalada igualmente.
 <details>
 <summary><b>Battle.net no termina de instalarse en silencio</b></summary>
 
-El instalador de Battle.net es un *bootstrapper* online de Blizzard que cambia a
-menudo, y su instalación silenciosa es poco fiable. El script lo intenta primero
-con winget (saltándose la comprobación de hash) y, si falla, **descarga el
-instalador oficial y lo abre**; en ese caso puede que tengas que pulsar un par de
-veces para completarlo. Es el único launcher que a veces no es 100% desatendido.
+winget **no puede** instalar Battle.net cuando se ejecuta como Administrador: el
+instalador de Blizzard cambia constantemente y su hash no coincide con el del
+manifiesto, y winget [no permite saltarse esa comprobación estando
+elevado](https://github.com/microsoft/winget-cli/issues/3640). Por eso Battle.net
+se instala **directamente desde el instalador oficial de Blizzard** (sin winget).
+Ese instalador es un *bootstrapper* sin modo silencioso documentado, así que su
+ventana puede aparecer y quizá tengas que dar un par de clics. Es el único
+launcher que no es 100% desatendido.
 </details>
 
 <details>

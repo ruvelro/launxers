@@ -56,7 +56,7 @@ param(
 # ---------------------------------------------------------------------------
 # Constantes y rutas
 # ---------------------------------------------------------------------------
-$ScriptVersion = '1.1.4'
+$ScriptVersion = '1.1.5'
 $ScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 $LogFile = Join-Path $ScriptRoot 'Install-GameLaunchers.log'
 
@@ -101,7 +101,7 @@ $Launchers = @(
     }
     [pscustomobject]@{
         Name = 'Battle.net'; WingetId = 'Blizzard.BattleNet'; WingetSource = 'winget'
-        WingetExtraArgs = @('--location', (Join-Path $ProgramFilesX86 'Battle.net'), '--force', '--ignore-security-hash')
+        SkipWinget = $true   # winget no puede saltarse el hash mismatch estando elevado
         FallbackUrl = 'https://www.battle.net/download/getInstallerForGame?os=win&gameProgram=BATTLENET_APP&version=Live'
         FallbackArgs = @(); Notes = 'Cliente de Blizzard.'
     }
@@ -371,8 +371,11 @@ function Install-ViaFallback {
         if ($isMsi) {
             $msiArgs = @('/i', "`"$dest`"") + $Launcher.FallbackArgs
             $p = Start-Process -FilePath 'msiexec.exe' -ArgumentList $msiArgs -Wait -PassThru
-        } else {
+        } elseif ($Launcher.FallbackArgs -and @($Launcher.FallbackArgs).Count -gt 0) {
+            # -ArgumentList no admite arrays vacios: solo se pasa si hay flags.
             $p = Start-Process -FilePath $dest -ArgumentList $Launcher.FallbackArgs -Wait -PassThru
+        } else {
+            $p = Start-Process -FilePath $dest -Wait -PassThru
         }
         $code = $p.ExitCode
     } catch {
@@ -399,16 +402,26 @@ function Install-Launcher {
     Write-Host ''
     Write-Host "$progress>> $($Launcher.Name)" -ForegroundColor White
 
+    # Algunos launchers (Battle.net) no pueden instalarse por winget de forma
+    # fiable estando elevados: van directos a la descarga oficial.
+    $useWinget = $WingetAvailable -and (-not $Launcher.SkipWinget)
+
     # Modo simulacion: no toca el sistema.
     if ($DryRun) {
+        $via = if ($useWinget) { $Launcher.WingetSource } else { 'descarga directa' }
         $action = if ($Update) { 'actualizaria' } else { 'instalaria' }
-        $status = "Simulado: se $action via $($Launcher.WingetSource)"
+        $status = "Simulado: se $action via $via"
         Write-Log "$($Launcher.Name): $status" -Level INFO -Color Cyan
         return $status
     }
 
     # Modo actualizacion: solo winget upgrade.
     if ($Update) {
+        if ($Launcher.SkipWinget) {
+            $status = 'Actualizacion via winget no soportada (instalacion directa)'
+            Write-Log "$($Launcher.Name): $status" -Level WARN -Color Yellow
+            return $status
+        }
         if (-not $WingetAvailable) {
             $status = 'Update requiere winget (no disponible)'
             Write-Log "$($Launcher.Name): $status" -Level ERROR -Color Red
@@ -422,7 +435,7 @@ function Install-Launcher {
     }
 
     $result = $null
-    if ($WingetAvailable) {
+    if ($useWinget) {
         $result = Install-ViaWinget -Launcher $Launcher
         if ($result.Ok) {
             Write-Log "$($Launcher.Name): $($result.Status)" -Level OK -Color Green
